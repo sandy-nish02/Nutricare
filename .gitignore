@@ -1,0 +1,30 @@
+# Build output and the private Maven copy (run.bat downloads it again)
+target/
+.tools/
+
+# Old H2 demo database (NutriCare now runs on SQL Server)
+data/
+
+# IDE and OS files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+*.log
+
+# Microsoft JDBC download: Maven already provides the driver JAR, so only keep the
+# Windows-authentication DLL that run.bat loads, plus Microsoft's licence files.
+/sqljdbc_13.4/**
+!/sqljdbc_13.4/enu/
+!/sqljdbc_13.4/enu/license.txt
+!/sqljdbc_13.4/enu/redist.txt
+!/sqljdbc_13.4/enu/auth/
+!/sqljdbc_13.4/enu/auth/x64/
+!/sqljdbc_13.4/enu/auth/x64/mssql-jdbc_auth-13.4.0.x64.dll
+
+# Never commit secrets or database backups
+*.bak
+.env
+
+# Instruction files that come inside the per-member Git packages
+COMMIT_INSTRUCTIONS*.txt
