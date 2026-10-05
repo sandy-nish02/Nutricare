@@ -1,6 +1,5 @@
 package com.nutricare.config;
 
-import com.nutricare.repository.StaffAdminRepository;
 import com.nutricare.repository.UserPatientRepository;
 import com.nutricare.util.Passwords;
 import jakarta.servlet.ServletContextEvent;
