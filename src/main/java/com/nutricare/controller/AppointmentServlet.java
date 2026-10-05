@@ -1,5 +1,7 @@
 package com.nutricare.controller;
 
+import com.nutricare.repository.AppointmentRepository;
+import com.nutricare.service.AppointmentRules;
 import com.nutricare.util.Validation;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,6 +14,8 @@ import java.util.Set;
 @WebServlet(urlPatterns = {"/appointments", "/appointments/create", "/appointments/status",
         "/appointments/reschedule"})
 public class AppointmentServlet extends BaseServlet {
+    private final AppointmentRepository appointmentRepository = new AppointmentRepository();
+
     @Override
     protected void handleGet(HttpServletRequest request, HttpServletResponse response, String path)
             throws Exception {
@@ -20,9 +24,10 @@ public class AppointmentServlet extends BaseServlet {
             return;
         }
         requireAnyRole(request, "PATIENT", "DOCTOR", "NUTRITIONIST", "RECEPTIONIST", "ADMIN");
-        request.setAttribute("appointments", repository.appointments(userId(request), role(request)));
-        request.setAttribute("staffOptions", repository.staffForAppointments());
-        request.setAttribute("patients", repository.patients());
+        request.setAttribute("appointments", appointmentRepository.appointments(userId(request), role(request)));
+        request.setAttribute("staffOptions", appointmentRepository.staffForAppointments());
+        if (!"PATIENT".equals(role(request))) request.setAttribute("patients", patientRepository.patients());
+        request.setAttribute("slotMinutes", AppointmentRules.SLOT_MINUTES);
         render(request, response, "Appointments", "appointments");
     }
 
@@ -43,7 +48,7 @@ public class AppointmentServlet extends BaseServlet {
                 ? patientId(request) : Validation.id(request.getParameter("patientId"), "patient");
         LocalDateTime time = Validation.dateTime(request.getParameter("appointmentTime"), "appointment time");
         requireFutureTime(time);
-        repository.createAppointment(selectedPatient,
+        appointmentRepository.createAppointment(selectedPatient,
                 Validation.id(request.getParameter("staffId"), "staff member"), time,
                 Validation.required(request.getParameter("purpose"), "Purpose", 500), userId(request));
         success(request, response, "Appointment requested.", "/appointments");
@@ -54,19 +59,18 @@ public class AppointmentServlet extends BaseServlet {
         long id = Validation.id(request.getParameter("id"), "appointment");
         String status = Validation.required(request.getParameter("status"), "Status", 30).toUpperCase();
         String reason = Validation.optional(request.getParameter("reason"), 500);
-        if (("CANCELLED".equals(status) || "NO_SHOW".equals(status))
-                && (reason == null || reason.isBlank())) {
+        if (AppointmentRules.requiresReason(status) && reason == null) {
             throw new IllegalArgumentException("Enter a reason for this appointment status.");
         }
         if ("PATIENT".equals(role(request))) {
             if (!"CANCELLED".equals(status)) {
                 throw new IllegalArgumentException("Patients may only cancel appointments.");
             }
-            repository.cancelOwnAppointment(id, userId(request), reason);
+            appointmentRepository.cancelOwnAppointment(id, userId(request), reason);
         } else {
             requireChoice(status, Set.of("PENDING", "CONFIRMED", "COMPLETED", "CANCELLED", "NO_SHOW"),
                     "appointment status");
-            repository.updateAppointmentStatus(id, status, userId(request), role(request), reason);
+            appointmentRepository.updateAppointmentStatus(id, status, userId(request), role(request), reason);
         }
         success(request, response, "Appointment status updated.", "/appointments");
     }
@@ -75,7 +79,7 @@ public class AppointmentServlet extends BaseServlet {
         requireAnyRole(request, "DOCTOR", "NUTRITIONIST", "RECEPTIONIST", "ADMIN");
         LocalDateTime time = Validation.dateTime(request.getParameter("appointmentTime"), "appointment time");
         requireFutureTime(time);
-        repository.rescheduleAppointment(Validation.id(request.getParameter("id"), "appointment"),
+        appointmentRepository.rescheduleAppointment(Validation.id(request.getParameter("id"), "appointment"),
                 time, Validation.required(request.getParameter("reason"), "Reschedule reason", 500),
                 userId(request), role(request));
         success(request, response, "Appointment rescheduled and returned to pending.", "/appointments");
