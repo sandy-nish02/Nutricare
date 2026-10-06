@@ -2,8 +2,7 @@ package com.nutricare.repository;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /** Module 06 - User & Staff Management (Admin). */
 class StaffAdminRepositoryTest extends IntegrationTestBase {
